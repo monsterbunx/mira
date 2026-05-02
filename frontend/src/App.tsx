@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import DeviceDetail from "./DeviceDetail";
 
 type Device = {
   id: string;
@@ -85,14 +86,16 @@ function readParams() {
     q: p.get("q") ?? "",
     os: new Set((p.get("os") ?? "").split(",").filter(Boolean)),
     status: (p.get("status") as StatusFilter) || "all",
+    id: p.get("id"),
   };
 }
 
-function writeParams(state: { q: string; os: Set<string>; status: StatusFilter }) {
+function writeParams(state: { q: string; os: Set<string>; status: StatusFilter; id: string | null }) {
   const p = new URLSearchParams();
   if (state.q) p.set("q", state.q);
   if (state.os.size > 0) p.set("os", Array.from(state.os).join(","));
   if (state.status !== "all") p.set("status", state.status);
+  if (state.id) p.set("id", state.id);
   const qs = p.toString();
   const url = qs ? `?${qs}` : window.location.pathname;
   window.history.replaceState({}, "", url);
@@ -109,10 +112,11 @@ export default function App() {
   const [search, setSearch] = useState(initial.q);
   const [osFilter, setOsFilter] = useState<Set<string>>(initial.os);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initial.status);
+  const [selectedId, setSelectedId] = useState<string | null>(initial.id);
 
   useEffect(() => {
-    writeParams({ q: search, os: osFilter, status: statusFilter });
-  }, [search, osFilter, statusFilter]);
+    writeParams({ q: search, os: osFilter, status: statusFilter, id: selectedId });
+  }, [search, osFilter, statusFilter, selectedId]);
 
   async function refreshAll() {
     setError(null);
@@ -296,7 +300,19 @@ export default function App() {
         ) : (
           <ul className="cards">
             {visibleDevices.map((d) => (
-              <li key={d.id} className={`card ${d.online ? "online" : "offline"}`}>
+              <li
+                key={d.id}
+                className={`card ${d.online ? "online" : "offline"} ${selectedId === d.id ? "selected" : ""}`}
+                onClick={() => setSelectedId(d.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedId(d.id);
+                  }
+                }}
+              >
                 <div className="card-head">
                   <span className="card-icon">{osIcon(d.os)}</span>
                   <div>
@@ -320,6 +336,8 @@ export default function App() {
           </ul>
         )}
       </section>
+
+      {selectedId && <DeviceDetail id={selectedId} onClose={() => setSelectedId(null)} />}
     </main>
   );
 }
