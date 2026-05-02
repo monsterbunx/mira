@@ -1,0 +1,14 @@
+services:
+  vite:
+    image: debian:12
+    container_name: mira-vite
+    hostname: mira-vite
+    ports:
+      - "5174:5174"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./scripts/vite:/scripts
+      - ./frontend:/app
+    command: ["/bin/bash", "/scripts/main.sh"]
+    restart: unless-stopped

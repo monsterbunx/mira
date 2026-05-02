@@ -1,0 +1,46 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Device {
+  id          String   @id              // tailscale device id (estable)
+  name        String                    // hostname / nombre tailscale
+  os          String?
+  ipv4        String?
+  tailnetIp   String?                   // 100.x.x.x
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @default(now())
+  online      Boolean  @default(false)
+  events      Event[]
+  snapshots   Snapshot[]
+}
+
+model Snapshot {
+  id        Int      @id @default(autoincrement())
+  takenAt   DateTime @default(now())
+  online    Boolean
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId  String
+  rxBytes   BigInt?
+  txBytes   BigInt?
+
+  @@index([deviceId, takenAt])
+  @@index([takenAt])
+}
+
+model Event {
+  id        Int      @id @default(autoincrement())
+  at        DateTime @default(now())
+  kind      String                       // "online" | "offline" | "first_seen"
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId  String
+
+  @@index([deviceId, at])
+  @@index([at])
+}

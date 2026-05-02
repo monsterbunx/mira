@@ -1,0 +1,22 @@
+services:
+  tailscale:
+    image: debian:12
+    container_name: mira-tailscale
+    hostname: mira-tailscale
+    ports:
+      - "41642:41642"
+    environment:
+      TS_AUTHKEY: "${TS_AUTHKEY:-}"
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./scripts/tailscale:/scripts
+      - mira_tailscale_state:/var/lib/tailscale
+    command: ["/bin/bash", "/scripts/main.sh"]
+    restart: unless-stopped
+
+volumes:
+  mira_tailscale_state:

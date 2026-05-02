@@ -1,0 +1,18 @@
+services:
+  bun:
+    image: debian:12
+    container_name: mira-bun
+    hostname: mira-bun
+    ports:
+      - "3031:3000"
+    environment:
+      DATABASE_URL: "postgresql://mira:mira_dev@host.docker.internal:5433/mira"
+      TAILSCALE_STATUS_URL: "http://host.docker.internal:41642/status"
+      POLL_INTERVAL_MS: "30000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./scripts/bun:/scripts
+      - ./app:/app
+    command: ["/bin/bash", "/scripts/main.sh"]
+    restart: unless-stopped

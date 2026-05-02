@@ -1,0 +1,14 @@
+app/node_modules/
+app/bun.lock
+app/bun.lockb
+app/.env
+app/prisma/migrations/
+
+frontend/node_modules/
+frontend/bun.lock
+frontend/bun.lockb
+frontend/dist/
+frontend/.vite/
+
+.env
+.DS_Store

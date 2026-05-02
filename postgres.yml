@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: debian:12
+    container_name: mira-postgres
+    hostname: mira-postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./scripts/postgres:/scripts
+      - mira_pg:/var/lib/postgresql
+    command: ["/bin/bash", "/scripts/main.sh"]
+    restart: unless-stopped
+
+volumes:
+  mira_pg:

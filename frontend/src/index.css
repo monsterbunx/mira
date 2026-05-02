@@ -1,0 +1,258 @@
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --panel: #161b22;
+  --fg: #e6edf3;
+  --accent: #fbbf24;
+  --info: #4cc9f0;
+  --muted: #6b7280;
+  --border: #30363d;
+  --error: #f87171;
+  --ok: #4ade80;
+  --off: #6b7280;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+h1 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.8rem;
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+h2 {
+  margin: 2rem 0 1rem;
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.badge-ok {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.badge-down {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.poll-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  cursor: pointer;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, border-color 0.15s;
+}
+
+.poll-btn:hover {
+  border-color: var(--accent);
+  transform: rotate(90deg);
+}
+
+.error {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid var(--error);
+  color: var(--error);
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.4rem;
+  margin-bottom: 1rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.kpi {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 1.1rem 1.25rem;
+}
+
+.kpi-num {
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-label {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.chart {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 1rem 0.5rem 0.5rem;
+}
+
+.cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.95rem 1.1rem;
+  position: relative;
+  transition: border-color 0.15s;
+}
+
+.card.online {
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.card-icon {
+  font-size: 1.4rem;
+}
+
+.card-head strong {
+  display: block;
+  color: var(--fg);
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.card-os {
+  display: block;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  margin-top: 0.1rem;
+}
+
+.dot {
+  margin-left: auto;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0 currentColor;
+}
+
+.dot-on {
+  background: var(--ok);
+  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.15);
+}
+
+.dot-off {
+  background: var(--off);
+}
+
+.card-body {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.row span {
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+.row code {
+  font-family: ui-monospace, monospace;
+  color: var(--fg);
+  font-size: 0.85rem;
+}
