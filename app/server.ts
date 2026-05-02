@@ -91,15 +91,20 @@ async function pollOnce() {
     const prev = await prisma.device.findUnique({ where: { id: n.id } });
     const wasOnline = prev?.online ?? false;
 
+    const deviceData = {
+      id: n.id,
+      name: n.name,
+      os: n.os,
+      ipv4: n.ipv4,
+      tailnetIp: n.tailnetIp,
+      online: n.online,
+    };
+
     await prisma.device.upsert({
       where: { id: n.id },
-      create: { ...n, lastSeen: now },
+      create: { ...deviceData, lastSeen: now },
       update: {
-        name: n.name,
-        os: n.os,
-        ipv4: n.ipv4,
-        tailnetIp: n.tailnetIp,
-        online: n.online,
+        ...deviceData,
         lastSeen: n.online ? now : prev?.lastSeen ?? now,
       },
     });
