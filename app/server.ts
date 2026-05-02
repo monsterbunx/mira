@@ -186,6 +186,20 @@ const server = Bun.serve({
       );
     }
 
+    if (req.method === "GET" && url.pathname === "/events/since") {
+      const ts = url.searchParams.get("ts");
+      if (!ts) return json({ error: "ts query param required (ISO)" }, { status: 400 });
+      const since = new Date(ts);
+      if (isNaN(since.getTime())) return json({ error: "invalid ts" }, { status: 400 });
+      const events = await prisma.event.findMany({
+        where: { at: { gt: since } },
+        orderBy: { at: "asc" },
+        take: 100,
+        include: { device: { select: { id: true, name: true, os: true } } },
+      });
+      return json(events);
+    }
+
     const m = url.pathname.match(/^\/devices\/([^/]+)\/history$/);
     if (req.method === "GET" && m) {
       const id = decodeURIComponent(m[1]);

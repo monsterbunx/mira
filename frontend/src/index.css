@@ -109,6 +109,143 @@ h2 {
   transform: rotate(90deg);
 }
 
+.notif-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  cursor: pointer;
+  height: 2rem;
+  padding: 0 0.7rem;
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.notif-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.notif-btn:disabled {
+  cursor: default;
+}
+
+.notif-granted {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.notif-denied {
+  color: var(--off);
+  border-color: var(--off);
+  opacity: 0.7;
+}
+
+.toaster {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 60;
+  display: grid;
+  gap: 0.5rem;
+  pointer-events: none;
+  max-width: calc(100vw - 2rem);
+}
+
+.toast {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  pointer-events: auto;
+  cursor: pointer;
+  min-width: 280px;
+  max-width: 360px;
+  font: inherit;
+  text-align: left;
+  color: var(--fg);
+  animation: toast-in 0.22s ease-out;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.toast:hover {
+  transform: translateX(-3px);
+}
+
+.toast-online {
+  border-left-color: var(--ok);
+}
+
+.toast-offline {
+  border-left-color: var(--error);
+}
+
+.toast-first_seen {
+  border-left-color: var(--info);
+}
+
+.toast-icon {
+  font-size: 1.2rem;
+}
+
+.toast-body {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.toast-body strong {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-msg {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.toast-time {
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.toast-close {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.3rem;
+  transition: color 0.15s, background 0.15s;
+}
+
+.toast-close:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 .error {
   background: rgba(248, 113, 113, 0.1);
   border: 1px solid var(--error);

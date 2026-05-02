@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -10,6 +10,7 @@ import {
   Legend,
 } from "recharts";
 import DeviceDetail from "./DeviceDetail";
+import Toaster, { type Toast } from "./Toaster";
 
 type Device = {
   id: string;
@@ -114,6 +115,12 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initial.status);
   const [selectedId, setSelectedId] = useState<string | null>(initial.id);
 
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastIdRef = useRef(0);
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
+    typeof Notification !== "undefined" ? Notification.permission : "denied",
+  );
+
   useEffect(() => {
     writeParams({ q: search, os: osFilter, status: statusFilter, id: selectedId });
   }, [search, osFilter, statusFilter, selectedId]);
@@ -146,6 +153,84 @@ export default function App() {
     const t = setInterval(refreshAll, REFRESH_MS);
     return () => clearInterval(t);
   }, []);
+
+  function dismissToast(id: number) {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function pushToast(t: Omit<Toast, "id">) {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev.slice(-4), { ...t, id }]);
+    setTimeout(() => dismissToast(id), 7000);
+  }
+
+  // Poll de eventos para toasts + Notification API
+  useEffect(() => {
+    const STORAGE_KEY = "mira:lastEventTs";
+    let since = localStorage.getItem(STORAGE_KEY) ?? new Date(Date.now() - 60_000).toISOString();
+    let alive = true;
+
+    async function tick() {
+      try {
+        const res = await fetch(`/api/events/since?ts=${encodeURIComponent(since)}`);
+        if (!res.ok) return;
+        const events = (await res.json()) as Array<{
+          id: number;
+          at: string;
+          kind: "online" | "offline" | "first_seen";
+          deviceId: string;
+          device: { id: string; name: string; os: string | null };
+        }>;
+        if (!alive || events.length === 0) return;
+
+        // Solo toasta los últimos 5 si vienen muchos de golpe
+        const recent = events.slice(-5);
+        for (const e of recent) {
+          pushToast({
+            kind: e.kind,
+            deviceId: e.deviceId,
+            deviceName: e.device.name,
+            at: e.at,
+          });
+          if (
+            typeof Notification !== "undefined" &&
+            Notification.permission === "granted" &&
+            (document.hidden || !document.hasFocus())
+          ) {
+            const label =
+              e.kind === "online" ? "🟢 vino online" : e.kind === "offline" ? "🔴 se fue offline" : "🆕 primera vez visto";
+            const n = new Notification(`mira · ${e.device.name}`, {
+              body: label,
+              tag: `mira-${e.deviceId}`,
+            });
+            n.onclick = () => {
+              window.focus();
+              setSelectedId(e.deviceId);
+              n.close();
+            };
+          }
+        }
+
+        since = events[events.length - 1].at;
+        localStorage.setItem(STORAGE_KEY, since);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    tick();
+    const t = setInterval(tick, REFRESH_MS);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  async function requestNotifPerm() {
+    if (typeof Notification === "undefined") return;
+    const p = await Notification.requestPermission();
+    setNotifPerm(p);
+  }
 
   const onlineCount = devices.filter((d) => d.online).length;
 
@@ -189,6 +274,20 @@ export default function App() {
           <span className={`badge badge-${health?.tailscale === "up" ? "ok" : "down"}`}>
             tailscale: {health?.tailscale ?? "?"}
           </span>
+          <button
+            className={`notif-btn notif-${notifPerm}`}
+            onClick={requestNotifPerm}
+            disabled={notifPerm !== "default"}
+            title={
+              notifPerm === "granted"
+                ? "notificaciones nativas activas (al SO)"
+                : notifPerm === "denied"
+                  ? "permiso bloqueado en el navegador"
+                  : "activar notificaciones nativas"
+            }
+          >
+            🔔 {notifPerm === "granted" ? "✓" : notifPerm === "denied" ? "✕" : "activar"}
+          </button>
           <button className="poll-btn" onClick={forcePoll} title="forzar refresh">↻</button>
         </div>
       </header>
@@ -338,6 +437,15 @@ export default function App() {
       </section>
 
       {selectedId && <DeviceDetail id={selectedId} onClose={() => setSelectedId(null)} />}
+
+      <Toaster
+        toasts={toasts}
+        onDismiss={dismissToast}
+        onClickToast={(id) => setSelectedId(id)}
+        deviceOs={
+          new Map(devices.map((d) => [d.id, d.os] as const))
+        }
+      />
     </main>
   );
 }
