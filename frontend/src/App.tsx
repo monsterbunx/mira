@@ -36,6 +36,32 @@ type Health = {
   error?: string;
 };
 
+type SparkBucket = { b: number; o: number };
+type SparksMap = Record<string, SparkBucket[]>;
+
+function Sparkline({ data }: { data: SparkBucket[] | undefined }) {
+  if (!data || data.length === 0) return <div className="spark spark-empty" aria-label="sin datos" />;
+  const now = Date.now();
+  const windowStart = now - 24 * 3600 * 1000;
+  const totalMin = 24 * 60;
+  return (
+    <svg
+      className="spark"
+      viewBox={`0 0 ${totalMin} 10`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label="actividad 24h"
+    >
+      {data.map((p, i) => {
+        const x = Math.max(0, (p.b - windowStart) / 60000);
+        return (
+          <rect key={i} x={x} y={0} width={30} height={10} fill="#4ade80" opacity={p.o} />
+        );
+      })}
+    </svg>
+  );
+}
+
 type StatusFilter = "all" | "online" | "offline";
 
 const REFRESH_MS = 15000;
@@ -105,6 +131,7 @@ function writeParams(state: { q: string; os: Set<string>; status: StatusFilter; 
 export default function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
+  const [sparks, setSparks] = useState<SparksMap>({});
   const [health, setHealth] = useState<Health | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,14 +155,16 @@ export default function App() {
   async function refreshAll() {
     setError(null);
     try {
-      const [d, t, h] = await Promise.all([
+      const [d, t, h, s] = await Promise.all([
         fetch("/api/devices").then((r) => r.json()),
         fetch("/api/timeline").then((r) => r.json()),
         fetch("/api/health").then((r) => r.json()),
+        fetch("/api/sparks").then((r) => r.json()),
       ]);
       setDevices(d);
       setTimeline(t);
       setHealth(h);
+      setSparks(s);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -429,6 +458,7 @@ export default function App() {
                     <span>last seen</span>
                     <code>{relTime(d.lastSeen)}</code>
                   </div>
+                  <Sparkline data={sparks[d.id]} />
                 </div>
               </li>
             ))}

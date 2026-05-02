@@ -186,6 +186,27 @@ const server = Bun.serve({
       );
     }
 
+    if (req.method === "GET" && url.pathname === "/sparks") {
+      const since = new Date(Date.now() - 24 * 3600 * 1000);
+      const rows = await prisma.$queryRaw<Array<{ deviceId: string; bucket: Date; online_frac: number }>>`
+        SELECT
+          "deviceId",
+          to_timestamp(floor(extract(epoch from "takenAt")/1800)*1800) AT TIME ZONE 'UTC' as bucket,
+          AVG(CASE WHEN online THEN 1.0 ELSE 0.0 END)::float as online_frac
+        FROM "Snapshot"
+        WHERE "takenAt" >= ${since}
+        GROUP BY "deviceId", bucket
+        ORDER BY "deviceId", bucket
+      `;
+      const out: Record<string, Array<{ b: number; o: number }>> = {};
+      for (const r of rows) {
+        const id = r.deviceId;
+        if (!out[id]) out[id] = [];
+        out[id].push({ b: new Date(r.bucket).getTime(), o: Number(r.online_frac) });
+      }
+      return json(out);
+    }
+
     if (req.method === "GET" && url.pathname === "/events/since") {
       const ts = url.searchParams.get("ts");
       if (!ts) return json({ error: "ts query param required (ISO)" }, { status: 400 });
