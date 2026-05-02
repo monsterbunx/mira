@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Device = {
   id: string;
@@ -57,6 +57,93 @@ function eventLabel(kind: string) {
   if (kind === "offline") return "🔴 se fue offline";
   if (kind === "first_seen") return "🆕 primera vez visto";
   return kind;
+}
+
+const WINDOW_MS = 24 * 3600 * 1000;
+
+type Segment = { start: number; end: number; online: boolean };
+
+function buildSegments(snapshots: Snapshot[], now: number): Segment[] {
+  const windowStart = now - WINDOW_MS;
+  const inWindow = snapshots.filter((s) => new Date(s.takenAt).getTime() >= windowStart);
+  if (inWindow.length === 0) return [];
+
+  const raw: Segment[] = inWindow.map((s, i) => {
+    const start = new Date(s.takenAt).getTime();
+    const end = i + 1 < inWindow.length ? new Date(inWindow[i + 1].takenAt).getTime() : now;
+    return { start, end, online: s.online };
+  });
+
+  const merged: Segment[] = [];
+  for (const s of raw) {
+    const last = merged[merged.length - 1];
+    if (last && last.online === s.online) last.end = s.end;
+    else merged.push({ ...s });
+  }
+  return merged;
+}
+
+function Gantt({ snapshots }: { snapshots: Snapshot[] }) {
+  const now = Date.now();
+  const windowStart = now - WINDOW_MS;
+  const totalMin = 24 * 60;
+
+  const segments = useMemo(() => buildSegments(snapshots, now), [snapshots, now]);
+
+  if (segments.length === 0) return <p className="empty">sin snapshots en las últimas 24h.</p>;
+
+  const onlineMs = segments.filter((s) => s.online).reduce((a, s) => a + (s.end - s.start), 0);
+  const onlinePct = Math.round((onlineMs / WINDOW_MS) * 100);
+
+  const ticks = [-24, -18, -12, -6, 0];
+
+  return (
+    <div className="gantt">
+      <div className="gantt-summary">
+        <span className="gantt-pct">{onlinePct}%</span>
+        <span className="gantt-pct-lbl">online en últimas 24h</span>
+      </div>
+      <svg
+        className="gantt-svg"
+        viewBox={`0 0 ${totalMin} 30`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label="timeline 24h"
+      >
+        {segments.map((s, i) => {
+          const x = (s.start - windowStart) / 60000;
+          const w = (s.end - s.start) / 60000;
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={0}
+              width={Math.max(w, 0.5)}
+              height={30}
+              fill={s.online ? "#4ade80" : "#6b7280"}
+              opacity={s.online ? 0.85 : 0.35}
+            >
+              <title>
+                {fmtFull(new Date(s.start).toISOString())} → {fmtFull(new Date(s.end).toISOString())} (
+                {s.online ? "online" : "offline"})
+              </title>
+            </rect>
+          );
+        })}
+      </svg>
+      <div className="gantt-ticks">
+        {ticks.map((h) => {
+          const t = new Date(now + h * 3600 * 1000);
+          const left = ((h + 24) / 24) * 100;
+          return (
+            <span key={h} className="gantt-tick" style={{ left: `${left}%` }}>
+              {h === 0 ? "ahora" : t.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function DeviceDetail({ id, onClose }: { id: string; onClose: () => void }) {
@@ -135,6 +222,13 @@ export default function DeviceDetail({ id, onClose }: { id: string; onClose: () 
         </header>
 
         {error && <div className="error">{error}</div>}
+
+        {data && (
+          <section>
+            <h3>actividad — últimas 24h</h3>
+            <Gantt snapshots={data.snapshots} />
+          </section>
+        )}
 
         {data && (
           <section>

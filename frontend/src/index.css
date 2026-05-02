@@ -471,6 +471,55 @@ h2 {
   font-weight: 500;
 }
 
+.gantt {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.gantt-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.gantt-pct {
+  color: var(--ok);
+  font-size: 1.4rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.gantt-pct-lbl {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.gantt-svg {
+  width: 100%;
+  height: 30px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.gantt-ticks {
+  position: relative;
+  height: 1.1em;
+}
+
+.gantt-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .events {
   list-style: none;
   padding: 0;
