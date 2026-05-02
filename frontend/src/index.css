@@ -520,6 +520,30 @@ h2 {
   white-space: nowrap;
 }
 
+.traffic-summary {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.traffic-pill {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.traffic-rx {
+  color: var(--info);
+  border-color: var(--info);
+}
+
+.traffic-tx {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .events {
   list-style: none;
   padding: 0;

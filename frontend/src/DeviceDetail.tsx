@@ -1,4 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 
 type Device = {
   id: string;
@@ -81,6 +90,78 @@ function buildSegments(snapshots: Snapshot[], now: number): Segment[] {
     else merged.push({ ...s });
   }
   return merged;
+}
+
+function fmtBytesPerSec(bps: number): string {
+  if (bps < 1024) return `${bps.toFixed(0)} B/s`;
+  if (bps < 1024 ** 2) return `${(bps / 1024).toFixed(1)} KB/s`;
+  if (bps < 1024 ** 3) return `${(bps / 1024 ** 2).toFixed(2)} MB/s`;
+  return `${(bps / 1024 ** 3).toFixed(2)} GB/s`;
+}
+
+function fmtTimeShort(iso: string) {
+  return new Date(iso).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+}
+
+type TrafficPoint = { bucket: string; rx: number; tx: number };
+
+function buildTraffic(snapshots: Snapshot[]): TrafficPoint[] {
+  const points: TrafficPoint[] = [];
+  for (let i = 1; i < snapshots.length; i++) {
+    const a = snapshots[i - 1];
+    const b = snapshots[i];
+    const dt = (new Date(b.takenAt).getTime() - new Date(a.takenAt).getTime()) / 1000;
+    if (dt <= 0) continue;
+    const dRx = Math.max(0, Number(b.rxBytes ?? 0) - Number(a.rxBytes ?? 0));
+    const dTx = Math.max(0, Number(b.txBytes ?? 0) - Number(a.txBytes ?? 0));
+    points.push({ bucket: b.takenAt, rx: dRx / dt, tx: dTx / dt });
+  }
+  return points;
+}
+
+function Traffic({ snapshots }: { snapshots: Snapshot[] }) {
+  const points = useMemo(() => buildTraffic(snapshots), [snapshots]);
+  if (points.length < 2) return <p className="empty">sin tráfico medible aún (necesitamos ≥2 snapshots).</p>;
+
+  const maxRx = Math.max(...points.map((p) => p.rx));
+  const maxTx = Math.max(...points.map((p) => p.tx));
+  const peakRx = fmtBytesPerSec(maxRx);
+  const peakTx = fmtBytesPerSec(maxTx);
+
+  return (
+    <div className="traffic">
+      <div className="traffic-summary">
+        <span className="traffic-pill traffic-rx">↓ pico {peakRx}</span>
+        <span className="traffic-pill traffic-tx">↑ pico {peakTx}</span>
+      </div>
+      <div className="chart" style={{ padding: "0.6rem 0.3rem 0.3rem" }}>
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={points} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="rxGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#4cc9f0" stopOpacity={0.55} />
+                <stop offset="100%" stopColor="#4cc9f0" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="txGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.55} />
+                <stop offset="100%" stopColor="#fbbf24" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="#30363d" strokeDasharray="3 3" />
+            <XAxis dataKey="bucket" tickFormatter={fmtTimeShort} stroke="#6b7280" fontSize={11} />
+            <YAxis stroke="#6b7280" fontSize={11} tickFormatter={fmtBytesPerSec} width={70} />
+            <Tooltip
+              contentStyle={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 4 }}
+              labelFormatter={(v) => fmtFull(v as string)}
+              formatter={(value: number, name: string) => [fmtBytesPerSec(value), name === "rx" ? "↓ rx" : "↑ tx"]}
+            />
+            <Area type="monotone" dataKey="rx" stroke="#4cc9f0" fill="url(#rxGrad)" name="rx" />
+            <Area type="monotone" dataKey="tx" stroke="#fbbf24" fill="url(#txGrad)" name="tx" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
 function Gantt({ snapshots }: { snapshots: Snapshot[] }) {
@@ -227,6 +308,13 @@ export default function DeviceDetail({ id, onClose }: { id: string; onClose: () 
           <section>
             <h3>actividad — últimas 24h</h3>
             <Gantt snapshots={data.snapshots} />
+          </section>
+        )}
+
+        {data && (
+          <section>
+            <h3>tráfico</h3>
+            <Traffic snapshots={data.snapshots} />
           </section>
         )}
 
