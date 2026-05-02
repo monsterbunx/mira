@@ -45,9 +45,11 @@ if [ "$TS_BACKEND_STATE" != "Running" ]; then
   fi
 fi
 
-# HTTP server simple en :41642 que expone tailscale status --json
+# HTTP server simple en :41642 que expone tailscale status --json + ping helpers
 cat > /tmp/server.py <<'PY'
-import json, subprocess, http.server, socketserver
+import json, subprocess, http.server, socketserver, urllib.parse
+TIMEOUT_PING = 4
+TIMEOUT_PING_ALL = 30
 class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, fmt, *a): return
     def _json(self, code, body):
@@ -56,21 +58,57 @@ class H(http.server.BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body if isinstance(body, bytes) else json.dumps(body).encode())
+    def _ping(self, peer):
+        # tailscale ping --c=1 --timeout=3s <peer>; salida tipo "pong from <name> (100.x.x.x) via <relay/direct> in 12ms"
+        try:
+            r = subprocess.run(
+                ["tailscale", "ping", "--c", "1", "--timeout", "3s", peer],
+                capture_output=True, timeout=TIMEOUT_PING,
+            )
+            return {"peer": peer, "ok": r.returncode == 0, "out": r.stdout.decode(errors="ignore").strip(),
+                    "err": r.stderr.decode(errors="ignore").strip()}
+        except subprocess.TimeoutExpired:
+            return {"peer": peer, "ok": False, "out": "", "err": "timeout"}
+        except Exception as e:
+            return {"peer": peer, "ok": False, "out": "", "err": str(e)}
     def do_GET(self):
-        if self.path == "/health":
+        path, _, qs = self.path.partition("?")
+        params = urllib.parse.parse_qs(qs)
+        if path == "/health":
             up = subprocess.run(["tailscale", "status", "--json"], capture_output=True).returncode == 0
             return self._json(200, {"ok": True, "tailscale": "up" if up else "down"})
-        if self.path == "/status":
+        if path == "/status":
             r = subprocess.run(["tailscale", "status", "--json"], capture_output=True)
             if r.returncode != 0:
                 return self._json(503, {"error": "tailscale not ready", "stderr": r.stderr.decode(errors="ignore")})
             return self._json(200, r.stdout)
+        if path == "/ping":
+            peer = (params.get("peer") or [None])[0]
+            if not peer:
+                return self._json(400, {"error": "peer query param required"})
+            return self._json(200, self._ping(peer))
+        if path == "/ping/all":
+            # Pingea cada peer online en paralelo; respeta TIMEOUT_PING_ALL global
+            r = subprocess.run(["tailscale", "status", "--json"], capture_output=True)
+            if r.returncode != 0:
+                return self._json(503, {"error": "tailscale not ready"})
+            try:
+                data = json.loads(r.stdout)
+            except Exception as e:
+                return self._json(500, {"error": f"parse: {e}"})
+            peers = list((data.get("Peer") or {}).values())
+            online_ips = [p["TailscaleIPs"][0] for p in peers
+                          if p.get("Online") and p.get("TailscaleIPs")]
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=8) as ex:
+                results = list(ex.map(self._ping, online_ips))
+            return self._json(200, {"count": len(results), "results": results})
         return self._json(404, {"error": "not found"})
 
 class T(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
 
-print("[mira/tailscale] HTTP /status on :41642", flush=True)
+print("[mira/tailscale] HTTP /status /ping /ping/all on :41642", flush=True)
 T(("0.0.0.0", 41642), H).serve_forever()
 PY
 
