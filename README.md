@@ -116,3 +116,11 @@ El poller corre cada 30s en el backend (`POLL_INTERVAL_MS`). Cada peer del tailn
 - **PostgreSQL 15** — base de datos
 - **Vite 5 + React 18 + TypeScript** — frontend con HMR
 - **Recharts** — gráficas (AreaChart con gradients)
+
+## Screenshots
+
+![dashboard](docs/screenshots/dashboard-20260503-014804.png)
+
+![dashboard](docs/screenshots/dashboard-20260505-195426.png)
+
+
