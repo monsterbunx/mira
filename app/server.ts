@@ -165,15 +165,30 @@ const server = Bun.serve({
     }
 
     if (req.method === "GET" && url.pathname === "/timeline") {
-      // Online count agregado en buckets de 5min para las últimas 24h
+      // Online count agregado en buckets de 5min para las últimas 24h.
+      // Para cada device, tomamos solo SU ÚLTIMO snapshot dentro del bucket — así
+      // online ≤ total siempre, sin importar cuántos snapshots por device caigan
+      // dentro del mismo bucket (poller corre cada 30s, varios per bucket).
       const since = new Date(Date.now() - 24 * 3600 * 1000);
       const rows = await prisma.$queryRaw<Array<{ bucket: Date; online_count: bigint; total: bigint }>>`
+        WITH bucketed AS (
+          SELECT
+            "deviceId",
+            online,
+            to_timestamp(floor(extract(epoch from "takenAt")/300)*300) AT TIME ZONE 'UTC' as bucket,
+            ROW_NUMBER() OVER (
+              PARTITION BY "deviceId", floor(extract(epoch from "takenAt")/300)
+              ORDER BY "takenAt" DESC
+            ) as rn
+          FROM "Snapshot"
+          WHERE "takenAt" >= ${since}
+        )
         SELECT
-          to_timestamp(floor(extract(epoch from "takenAt")/300)*300) AT TIME ZONE 'UTC' as bucket,
+          bucket,
           SUM(CASE WHEN online THEN 1 ELSE 0 END) as online_count,
-          COUNT(DISTINCT "deviceId") as total
-        FROM "Snapshot"
-        WHERE "takenAt" >= ${since}
+          COUNT(*) as total
+        FROM bucketed
+        WHERE rn = 1
         GROUP BY bucket
         ORDER BY bucket ASC
       `;
